@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculateur de bénéfice</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121d30;
+      --panel2: #18263c;
+      --text: #edf4ff;
+      --muted: #9eb0ca;
+      --accent: #68e0c0;
+      --accent2: #8bb7ff;
+      --border: #2b3b55;
+      --danger: #ffb5b5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: radial-gradient(circle at top right, #1d3150 0, var(--bg) 48%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 28px 14px;
+    }
+    .container { max-width: 980px; margin: auto; }
+    header { margin-bottom: 22px; }
+    .tag {
+      display: inline-block; color: var(--accent); background: #18382f;
+      border: 1px solid #286653; border-radius: 999px; padding: 6px 11px;
+      font-size: 12px; font-weight: 700; letter-spacing: .5px;
+    }
+    h1 { font-size: clamp(27px, 5vw, 42px); margin: 13px 0 8px; }
+    p { color: var(--muted); line-height: 1.55; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .panel {
+      background: rgba(18,29,48,.94); border: 1px solid var(--border);
+      border-radius: 20px; padding: 22px; box-shadow: 0 18px 45px #0002;
+    }
+    h2 { margin: 0 0 18px; font-size: 18px; }
+    label { display: block; color: var(--muted); font-size: 13px; margin: 15px 0 7px; }
+    input, select {
+      width: 100%; border: 1px solid var(--border); background: #0c1627;
+      color: var(--text); padding: 12px 13px; border-radius: 10px; font-size: 16px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent2); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .results { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric { background: var(--panel2); padding: 15px; border-radius: 13px; min-width: 0; }
+    .metric span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .metric strong { font-size: clamp(18px, 3vw, 25px); overflow-wrap: anywhere; }
+    .highlight { border: 1px solid #286653; background: #15332e; }
+    .highlight strong { color: var(--accent); }
+    .wide { grid-column: 1 / -1; }
+    .note { font-size: 12px; background: #0c1627; padding: 12px; border-radius: 10px; margin-top: 14px; }
+    .bar { height: 8px; background: #26364e; border-radius: 999px; overflow: hidden; margin-top: 10px; }
+    .bar > div { height: 100%; width: 0%; background: var(--accent); transition: width .2s; }
+    button {
+      cursor: pointer; border: 0; background: var(--accent); color: #09231d; font-weight: 800;
+      padding: 12px 15px; border-radius: 10px; font-size: 14px;
+    }
+    .actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 15px; }
+    .secondary { background: #26364e; color: var(--text); }
+    .table-wrap { overflow-x: auto; margin-top: 16px; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th, td { text-align: left; padding: 11px 9px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th { color: var(--muted); font-weight: 600; }
+    td { color: var(--text); }
+    .small { font-size: 12px; }
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel { padding: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <span class="tag">SMALL BUSINESS · TUNISIE</span>
+      <h1>Calculateur de bénéfice</h1>
+      <p>Calcule le prix de vente, le bénéfice et le capital à récupérer pour tes accessoires. Les calculs se mettent à jour automatiquement.</p>
+    </header>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>1. Informations du produit</h2>
+
+        <label for="name">Nom du produit</label>
+        <input id="name" value="Coque téléphone" placeholder="Ex. Lunettes, montre...">
+
+        <label for="purchase">Prix d'achat par pièce (€)</label>
+        <input id="purchase" type="number" min="0" step="0.01" value="2.50">
+
+        <label for="rate">Taux EUR → TND (modifiable)</label>
+        <input id="rate" type="number" min="0.01" step="0.001" value="3.40">
+        <div class="hint">Exemple de taux seulement : remplace-le par le taux réel que tu paies.</div>
+
+        <label for="extra">Autres coûts par pièce (DT)</label>
+        <input id="extra" type="number" min="0" step="0.01" value="0">
+        <div class="hint">Laisse 0 s'il n'y a aucun autre coût. Ajoute les frais éventuels ici.</div>
+
+        <label for="quantity">Quantité achetée</label>
+        <input id="quantity" type="number" min="1" step="1" value="1">
+
+        <label for="strategy">Règle de prix de vente</label>
+        <select id="strategy">
+          <option value="dynamic" selected>Marge dynamique (prix bas = petite hausse)</option>
+          <option value="margin">Pourcentage de marge sur le prix de vente</option>
+          <option value="markup">Pourcentage ajouté au coût</option>
+        </select>
+
+        <div id="dynamicFields">
+          <label for="lowAdd">Ajout si coût inférieur à 10 DT</label>
+          <input id="lowAdd" type="number" min="0" step="0.5" value="4">
+          <label for="midAdd">Ajout si coût de 10 à 20 DT</label>
+          <input id="midAdd" type="number" min="0" step="0.5" value="5">
+          <label for="highAdd">Ajout si coût supérieur à 20 DT (%)</label>
+          <input id="highAdd" type="number" min="0" step="1" value="25">
+          <div class="hint">Ces valeurs sont des réglages de départ, pas une garantie que le prix sera accepté par le marché.</div>
+        </div>
+
+        <div id="percentFields" hidden>
+          <label for="percent">Pourcentage (%)</label>
+          <input id="percent" type="number" min="0" max="95" step="1" value="30">
+        </div>
+
+        <label for="saleOverride">Prix de vente manuel (DT, optionnel)</label>
+        <input id="saleOverride" type="number" min="0" step="0.1" placeholder="Laisser vide pour le calcul automatique">
+      </section>
+
+      <section class="panel">
+        <h2>2. Résultat</h2>
+        <div class="results">
+          <div class="metric">
+            <span>Coût d'achat / pièce</span>
+            <strong id="cost">—</strong>
+          </div>
+          <div class="metric">
+            <span>Prix conseillé / pièce</span>
+            <strong id="sale">—</strong>
+          </div>
+          <div class="metric highlight">
+            <span>Bénéfice / pièce</span>
+            <strong id="profit">—</strong>
+          </div>
+          <div class="metric">
+            <span>Marge réelle</span>
+            <strong id="margin">—</strong>
+          </div>
+          <div class="metric wide">
+            <span>Capital total à récupérer (achat + autres coûts)</span>
+            <strong id="capital">—</strong>
+          </div>
+          <div class="metric wide highlight">
+            <span>Bénéfice total si toute la quantité est vendue</span>
+            <strong id="totalProfit">—</strong>
+            <div class="bar"><div id="profitBar"></div></div>
+          </div>
+          <div class="metric wide">
+            <span>Chiffre d'affaires si tout est vendu</span>
+            <strong id="revenue">—</strong>
+          </div>
+        </div>
+        <div id="warning" class="note">Le bénéfice est estimé avant tout coût non indiqué et avant les invendus.</div>
+        <div class="actions">
+          <button id="save">Ajouter à la liste</button>
+          <button id="reset" class="secondary">Réinitialiser</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top:16px">
+      <h2>3. Liste des produits</h2>
+      <p class="small">Ajoute chaque produit pour suivre le capital à récupérer et le bénéfice potentiel total. Cette liste reste dans la page actuelle ; exporte-la en CSV pour la conserver.</p>
+      <div class="results">
+        <div class="metric"><span>Capital total de la liste</span><strong id="listCapital">0,00 DT</strong></div>
+        <div class="metric highlight"><span>Bénéfice potentiel total</span><strong id="listProfit">0,00 DT</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produit</th><th>Quantité</th><th>Coût total</th><th>Prix / pièce</th><th>Bénéfice total</th><th>Action</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="6">Aucun produit ajouté.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="export" class="secondary">Exporter CSV</button>
+        <button id="clearList" class="secondary">Vider la liste</button>
+      </div>
+    </section>
+    <p class="small">Conseil : vérifie les prix pratiqués par d'autres vendeurs avant de fixer ton prix. Le bénéfice affiché est potentiel : tu récupères réellement le capital seulement quand les produits sont vendus et payés.</p>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const fields = ["name", "purchase", "rate", "extra", "quantity", "strategy", "lowAdd", "midAdd", "highAdd", "percent", "saleOverride"];
+    let products = [];
+
+    const money = n => Number.isFinite(n)
+      ? n.toLocaleString("fr-TN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " DT"
+      : "—";
+    const num = id => Math.max(0, Number($(id).value) || 0);
+
+    function calculate() {
+      const purchase = num("purchase");
+      const rate = Math.max(0.001, num("rate"));
+      const extra = num("extra");
+      const qty = Math.max(1, Math.floor(num("quantity")));
+      const cost = purchase * rate + extra;
+      let sale;
+
+      if ($("saleOverride").value.trim() !== "") {
+        sale = num("saleOverride");
+      } else if ($("strategy").value === "dynamic") {
+        if (cost < 10) sale = cost + num("lowAdd");
+        else if (cost <= 20) sale = cost + num("midAdd");
+        else sale = cost * (1 + num("highAdd") / 100);
+      } else if ($("strategy").value === "margin") {
+        const p = Math.min(95, num("percent")) / 100;
+        sale = p >= 1 ? cost : cost / (1 - p);
+      } else {
+        sale = cost * (1 + num("percent") / 100);
+      }
+
+      const profit = sale - cost;
+      const totalCost = cost * qty;
+      const totalProfit = profit * qty;
+      const revenue = sale * qty;
+      const margin = sale > 0 ? profit / sale * 100 : 0;
+
+      $("cost").textContent = money(cost);
+      $("sale").textContent = money(sale);
+      $("profit").textContent = money(profit);
+      $("margin").textContent = sale > 0 ? margin.toFixed(1).replace(".", ",") + "%" : "—";
+      $("capital").textContent = money(totalCost);
+      $("totalProfit").textContent = money(totalProfit);
+      $("revenue").textContent = money(revenue);
+      $("profitBar").style.width = Math.max(0, Math.min(100, margin)) + "%";
+
+      let warning = "Le bénéfice est estimé avant tout coût non indiqué et avant les invendus.";
+      if (profit < 0) warning = "Attention : ce prix est inférieur au coût total. Tu vendrais à perte.";
+      else if (profit === 0) warning = "Attention : tu récupères le coût, mais tu ne fais aucun bénéfice.";
+      else if ($("saleOverride").value.trim() !== "") warning = "Prix manuel activé : vérifie que le prix couvre bien tous tes coûts.";
+      $("warning").textContent = warning;
+
+      const dynamic = $("strategy").value === "dynamic";
+      $("dynamicFields").hidden = !dynamic;
+      $("percentFields").hidden = dynamic;
+      return {
+        name: $("name").value.trim() || "Produit sans nom",
+        qty, cost, sale, profit, totalCost, totalProfit, revenue
+      };
+    }
+
+    function renderList() {
+      const rows = $("rows");
+      if (!products.length) {
+        rows.innerHTML = '<tr><td colspan="6">Aucun produit ajouté.</td></tr>';
+      } else {
+        rows.innerHTML = products.map((p, i) => `
+          <tr>
+            <td>${escapeHtml(p.name)}</td>
+            <td>${p.qty}</td>
+            <td>${money(p.totalCost)}</td>
+            <td>${money(p.sale)}</td>
+            <td>${money(p.totalProfit)}</td>
+            <td><button class="secondary" data-remove="${i}" style="padding:7px 9px">Supprimer</button></td>
+          </tr>`).join("");
+      }
+      $("listCapital").textContent = money(products.reduce((s, p) => s + p.totalCost, 0));
+      $("listProfit").textContent = money(products.reduce((s, p) => s + p.totalProfit, 0));
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+
+    fields.forEach(id => $(id).addEventListener("input", calculate));
+    $("strategy").addEventListener("change", calculate);
+    $("save").addEventListener("click", () => {
+      const p = calculate();
+      if (p.sale < p.cost) {
+        if (!confirm("Le prix de vente est inférieur au coût. Ajouter quand même ?")) return;
+      }
+      products.push(p);
+      renderList();
+    });
+    $("reset").addEventListener("click", () => {
+      $("name").value = "Coque téléphone";
+      $("purchase").value = "2.50";
+      $("rate").value = "3.40";
+      $("extra").value = "0";
+      $("quantity").value = "1";
+      $("strategy").value = "dynamic";
+      $("lowAdd").value = "4";
+      $("midAdd").value = "5";
+      $("highAdd").value = "25";
+      $("percent").value = "30";
+      $("saleOverride").value = "";
+      calculate();
+    });
+    $("rows").addEventListener("click", e => {
+      const btn = e.target.closest("[data-remove]");
+      if (!btn) return;
+      products.splice(Number(btn.dataset.remove), 1);
+      renderList();
+    });
+    $("clearList").addEventListener("click", () => {
+      if (confirm("Vider toute la liste des produits ?")) {
+        products = [];
+        renderList();
+      }
+    });
+    $("export").addEventListener("click", () => {
+      if (!products.length) {
+        alert("Ajoute au moins un produit avant l'export.");
+        return;
+      }
+      const csvRows = [
+        ["Produit", "Quantité", "Coût unitaire DT", "Prix vente DT", "Coût total DT", "Bénéfice total DT"],
+        ...products.map(p => [p.name, p.qty, p.cost.toFixed(2), p.sale.toFixed(2), p.totalCost.toFixed(2), p.totalProfit.toFixed(2)])
+      ];
+      const csv = "\uFEFF" + csvRows.map(row => row.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(";")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "calculateur-accessoires.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    calculate();
+    renderList();
+  </script>
+</body>
+</html>
