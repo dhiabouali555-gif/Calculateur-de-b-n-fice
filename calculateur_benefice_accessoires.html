@@ -174,7 +174,7 @@
 
     <section class="panel" style="margin-top:16px">
       <h2>3. Liste des produits</h2>
-      <p class="small">Ajoute chaque produit pour suivre le capital à récupérer et le bénéfice potentiel total. Cette liste reste dans la page actuelle ; exporte-la en CSV pour la conserver.</p>
+      <p class="small">Ajoute chaque produit pour suivre le capital à récupérer et le bénéfice potentiel total. La liste est enregistrée automatiquement dans ton navigateur, puis exporte-la en CSV pour la conserver ailleurs.</p>
       <div class="results">
         <div class="metric"><span>Capital total de la liste</span><strong id="listCapital">0,00 DT</strong></div>
         <div class="metric highlight"><span>Bénéfice potentiel total</span><strong id="listProfit">0,00 DT</strong></div>
@@ -196,7 +196,18 @@
   <script>
     const $ = id => document.getElementById(id);
     const fields = ["name", "purchase", "rate", "extra", "quantity", "strategy", "lowAdd", "midAdd", "highAdd", "percent", "saleOverride"];
+    const STORAGE_KEY = "calculateur-accessoires-v1";
     let products = [];
+
+    function loadProducts() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        if (Array.isArray(saved)) products = saved.filter(p => p && typeof p === "object");
+      } catch (e) { products = []; }
+    }
+    function saveProducts() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); } catch (e) {}
+    }
 
     const money = n => Number.isFinite(n)
       ? n.toLocaleString("fr-TN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " DT"
@@ -287,6 +298,7 @@
         if (!confirm("Le prix de vente est inférieur au coût. Ajouter quand même ?")) return;
       }
       products.push(p);
+      saveProducts();
       renderList();
     });
     $("reset").addEventListener("click", () => {
@@ -307,11 +319,13 @@
       const btn = e.target.closest("[data-remove]");
       if (!btn) return;
       products.splice(Number(btn.dataset.remove), 1);
+      saveProducts();
       renderList();
     });
     $("clearList").addEventListener("click", () => {
       if (confirm("Vider toute la liste des produits ?")) {
         products = [];
+        saveProducts();
         renderList();
       }
     });
@@ -343,6 +357,7 @@
       URL.revokeObjectURL(url);
     });
     calculate();
+    loadProducts();
     renderList();
   </script>
 </body>
