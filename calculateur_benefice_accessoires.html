@@ -206,6 +206,8 @@
         letter-spacing: .4px; color: #333 !important;
       }
       #printArea tfoot td { font-weight: 700; background: #f7f7f7; }
+      #printArea .col-sale { color: #0f766e !important; font-weight: 700; }
+      #printArea thead th.col-sale { color: #0f766e !important; }
       #printArea tr,
       #printArea .pclient,
       #printArea table {
@@ -528,7 +530,7 @@
           <td>${escapeHtml(cell(p.name))}</td>
           <td>${p.qty}</td>
           <td>${money(p.cost)}</td>
-          <td>${money(p.sale)}</td>
+          <td class="col-sale">${money(p.sale)}</td>
           <td>${money(p.profit)}</td>
           <td>${money(p.totalCost)}</td>
           <td>${money(p.totalProfit)}</td>
@@ -547,7 +549,7 @@
             <thead>
               <tr>
                 <th>#</th><th>Produit</th><th>Qté</th><th>Coût / pièce</th>
-                <th>Prix / pièce</th><th>Bénéfice / pièce</th><th>Coût total</th>
+                <th class="col-sale">Prix / pièce</th><th>Bénéfice / pièce</th><th>Coût total</th>
                 <th>Bénéfice total</th><th>Marge</th>
               </tr>
             </thead>
