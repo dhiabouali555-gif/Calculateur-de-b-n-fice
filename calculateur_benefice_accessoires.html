@@ -170,6 +170,49 @@
       .pc-grid { grid-template-columns: 1fr 1fr; }
       .panel { padding: 16px; }
     }
+    #printArea { display: none; }
+    @media print {
+      body > * { display: none !important; }
+      #printArea {
+        display: block !important;
+        color: #111 !important;
+        font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      }
+      body {
+        background: #fff !important;
+        background-image: none !important;
+        color: #111 !important;
+        padding: 0 !important;
+      }
+      @page { margin: 14mm 12mm; }
+      #printArea h1 {
+        font-size: 22px; font-weight: 800; color: #111 !important;
+        background: none !important; -webkit-text-fill-color: #111 !important;
+        margin: 0 0 6px;
+      }
+      #printArea .psub { color: #444 !important; font-size: 12px; margin: 0 0 14px; }
+      #printArea .psummary {
+        display: flex; flex-wrap: wrap; gap: 10px 26px;
+        margin: 0 0 16px; font-size: 13px; color: #111 !important;
+      }
+      #printArea .psummary strong { color: #111 !important; }
+      #printArea table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+      #printArea th, #printArea td {
+        border: 1px solid #bbb; padding: 5px; text-align: left;
+        color: #111 !important; vertical-align: top;
+      }
+      #printArea thead th {
+        background: #f0f0f0; text-transform: uppercase; font-size: 10px;
+        letter-spacing: .4px; color: #333 !important;
+      }
+      #printArea tfoot td { font-weight: 700; background: #f7f7f7; }
+      #printArea tr,
+      #printArea .pclient,
+      #printArea table {
+        break-inside: avoid; page-break-inside: avoid;
+      }
+      #printArea .longlink { word-break: break-all; color: #1a3a8f !important; }
+    }
   </style>
 </head>
 <body>
@@ -277,6 +320,10 @@
           </div>
           <div id="rows" class="product-list"></div>
           <div class="actions">
+            <button id="pdf">Exporter PDF</button>
+            <button id="backup" class="secondary">Sauvegarde (JSON)</button>
+            <button id="importBtn" class="secondary">Importer</button>
+            <input id="importFile" type="file" accept=".json,application/json" hidden>
             <button id="export" class="secondary">Exporter CSV</button>
             <button id="clearList" class="secondary">Vider la liste</button>
           </div>
@@ -285,6 +332,8 @@
     </div>
     <p class="small" style="margin-top:22px">Conseil : vérifie les prix pratiqués par d'autres vendeurs avant de fixer ton prix. Le bénéfice affiché est potentiel : tu récupères réellement le capital seulement quand les produits sont vendus et payés.</p>
   </main>
+
+  <div id="printArea"></div>
 
   <script>
     const $ = id => document.getElementById(id);
@@ -453,6 +502,103 @@
       a.click();
       URL.revokeObjectURL(url);
     });
+    function downloadBlob(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    $("pdf").addEventListener("click", () => {
+      if (!products.length) {
+        alert("Ajoute au moins un produit avant l'export PDF.");
+        return;
+      }
+      const date = new Date().toLocaleString("fr-FR");
+      const totalQty = products.reduce((s, p) => s + p.qty, 0);
+      const totalCost = products.reduce((s, p) => s + p.totalCost, 0);
+      const totalProfit = products.reduce((s, p) => s + p.totalProfit, 0);
+      const cell = v => (v === undefined || v === null || v === "" ? "—" : v);
+      const rows = products.map((p, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(cell(p.name))}</td>
+          <td>${p.qty}</td>
+          <td>${money(p.cost)}</td>
+          <td>${money(p.sale)}</td>
+          <td>${money(p.profit)}</td>
+          <td>${money(p.totalCost)}</td>
+          <td>${money(p.totalProfit)}</td>
+          <td>${p.sale > 0 ? (p.profit / p.sale * 100).toFixed(1).replace(".", ",") + " %" : "—"}</td>
+        </tr>`).join("");
+      $("printArea").innerHTML = `
+        <section class="pclient">
+          <h1>Liste des produits — Calculateur de bénéfice</h1>
+          <p class="psub">Exporté le ${date} · ${products.length} produit(s)</p>
+          <div class="psummary">
+            <span><strong>Capital total :</strong> ${money(totalCost)}</span>
+            <span><strong>Bénéfice potentiel total :</strong> ${money(totalProfit)}</span>
+            <span><strong>Quantité totale :</strong> ${totalQty}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Produit</th><th>Qté</th><th>Coût / pièce</th>
+                <th>Prix / pièce</th><th>Bénéfice / pièce</th><th>Coût total</th>
+                <th>Bénéfice total</th><th>Marge</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">Totaux</td>
+                <td>${totalQty}</td>
+                <td colspan="3"></td>
+                <td>${money(totalCost)}</td>
+                <td>${money(totalProfit)}</td>
+                <td>—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </section>`;
+      const prevTitle = document.title;
+      document.title = "Liste-produits-" + new Date().toISOString().slice(0, 10);
+      window.print();
+      setTimeout(() => { document.title = prevTitle; }, 500);
+    });
+
+    $("backup").addEventListener("click", () => {
+      downloadBlob(
+        JSON.stringify(products, null, 2),
+        "calculateur-accessoires-sauvegarde.json",
+        "application/json"
+      );
+    });
+
+    $("importBtn").addEventListener("click", () => $("importFile").click());
+    $("importFile").addEventListener("change", e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!Array.isArray(data)) throw new Error("Format invalide");
+          products = data.filter(p => p && typeof p === "object");
+          saveProducts();
+          renderList();
+          alert("Importation réussie : " + products.length + " produit(s).");
+        } catch (err) {
+          alert("Fichier JSON invalide.");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    });
+
     calculate();
     loadProducts();
     renderList();
